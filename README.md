@@ -1,2 +1,2 @@
-# raft4j-comp90020Appliction
+# raft4j-comp90020Application
 for raft algorithm test demo
