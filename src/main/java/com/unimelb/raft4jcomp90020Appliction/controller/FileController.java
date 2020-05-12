@@ -47,39 +47,32 @@ public class FileController {
     ////与 raft 集群建立连接
     public Response put(LogEntry logEntry){
         Response response = null;
-        if (client == null) {
-            try {
-                client = new Socket(raftLeaderIP, Integer.parseInt(raftLeaderPort));
-                clientOut = new ObjectOutputStream(client.getOutputStream());
-                clientIn = new ObjectInputStream(client.getInputStream());
-                clientOut.writeObject(logEntry);
-                clientOut.flush();
-                response = (Response) clientIn.readObject();
-            } catch (IOException | ClassNotFoundException e) {
-                e.printStackTrace();
-            } finally {
-                if (response != null && !response.getLeaderIP().equals(raftLeaderIP)) {
-                    raftLeaderIP = response.getLeaderIP();
-                    raftLeaderPort = Integer.toString(response.getLeaderPort());
-                    try {
-                        if (client != null) {
-                            client.shutdownInput();
-                            client.shutdownOutput();
-                            client.close();
-                            client = null;
-                        }
-                    } catch (IOException e) {
-                        e.printStackTrace();
+        try {
+            System.out.println(raftLeaderIP + ": "+ raftLeaderPort);
+            client = new Socket(raftLeaderIP, Integer.parseInt(raftLeaderPort));
+            clientOut = new ObjectOutputStream(client.getOutputStream());
+            clientIn = new ObjectInputStream(client.getInputStream());
+            clientOut.writeObject(logEntry);
+            clientOut.flush();
+            response = (Response) clientIn.readObject();
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        } finally {
+            if (response != null && (!response.getLeaderIP().equals(raftLeaderIP) || response.getLeaderPort()!=Integer.parseInt(raftLeaderPort))) {
+                System.out.println("修正 raftleader 地址" + raftLeaderIP + raftLeaderPort);
+                raftLeaderIP = response.getLeaderIP();
+                raftLeaderPort = Integer.toString(response.getLeaderPort());
+                System.out.println("修改后地址为：" + raftLeaderIP + ": "+ raftLeaderPort);
+                try {
+                    if (client != null) {
+                        client.shutdownInput();
+                        client.shutdownOutput();
+                        client.close();
+                        client = null;
                     }
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
-            }
-        }else{
-            try {
-                clientOut.writeObject(logEntry);
-                clientOut.flush();
-                response = (Response) clientIn.readObject();
-            } catch (IOException | ClassNotFoundException e) {
-                e.printStackTrace();
             }
         }
         return response;

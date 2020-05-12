@@ -3,8 +3,9 @@ hs_err_pid*
 HELP.md
 mvnw
 mvnw.cmd
-src/test/
 target/
 
 raft4j-comp90020Appliction.iml
 /.idea
+src/main/resources/static/
+src/main/resources/templates/
