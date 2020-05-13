@@ -1,7 +1,7 @@
 package com.unimelb.raft4jcomp90020Appliction.testFileControllerTCP;
 
-import com.unimelb.raft4jcomp90020Appliction.domain.LogEntry;
-import com.unimelb.raft4jcomp90020Appliction.domain.Response;
+import com.unimelb.raft4jcomp90020Appliction.raft.LogEntry;
+import com.unimelb.raft4jcomp90020Appliction.raft.Response;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;

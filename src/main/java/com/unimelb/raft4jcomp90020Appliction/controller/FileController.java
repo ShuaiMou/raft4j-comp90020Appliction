@@ -2,9 +2,12 @@ package com.unimelb.raft4jcomp90020Appliction.controller;
 
 
 import com.unimelb.raft4jcomp90020Appliction.domain.JsonData;
-import com.unimelb.raft4jcomp90020Appliction.domain.LogEntry;
-import com.unimelb.raft4jcomp90020Appliction.domain.Response;
 import com.unimelb.raft4jcomp90020Appliction.domain.StateType;
+import com.unimelb.raft4jcomp90020Appliction.raft.LogEntry;
+import com.unimelb.raft4jcomp90020Appliction.raft.Raft;
+import com.unimelb.raft4jcomp90020Appliction.raft.Response;
+import com.unimelb.raft4jcomp90020Appliction.raft.StateMachine;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,9 +19,6 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,51 +32,13 @@ public class FileController {
     @Value("${file.store.path}")
     private String fileStorePath;
 
+    @Autowired
+    private Raft raft;
 
-    @Value("${raftLeaderIP}")
-    public String raftLeaderIP;
-
-    @Value("${raftLeaderPort}")
-    public String raftLeaderPort;
-
-    private Socket client;
-    private ObjectOutputStream clientOut;
-    private ObjectInputStream clientIn;
+    @Autowired
+    private StateMachine stateMachine;
 
 
-    ////与 raft 集群建立连接
-    public Response put(LogEntry logEntry){
-        Response response = null;
-        try {
-            System.out.println(raftLeaderIP + ": "+ raftLeaderPort);
-            client = new Socket(raftLeaderIP, Integer.parseInt(raftLeaderPort));
-            clientOut = new ObjectOutputStream(client.getOutputStream());
-            clientIn = new ObjectInputStream(client.getInputStream());
-            clientOut.writeObject(logEntry);
-            clientOut.flush();
-            response = (Response) clientIn.readObject();
-        } catch (IOException | ClassNotFoundException e) {
-            e.printStackTrace();
-        } finally {
-            if (response != null && (!response.getLeaderIP().equals(raftLeaderIP) || response.getLeaderPort()!=Integer.parseInt(raftLeaderPort))) {
-                System.out.println("修正 raftleader 地址" + raftLeaderIP + raftLeaderPort);
-                raftLeaderIP = response.getLeaderIP();
-                raftLeaderPort = Integer.toString(response.getLeaderPort());
-                System.out.println("修改后地址为：" + raftLeaderIP + ": "+ raftLeaderPort);
-                try {
-                    if (client != null) {
-                        client.shutdownInput();
-                        client.shutdownOutput();
-                        client.close();
-                        client = null;
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-        return response;
-    }
 
     @PostMapping("/add")
     public JsonData uploadFile(@RequestParam("file") MultipartFile file, HttpServletRequest request){
@@ -84,18 +46,22 @@ public class FileController {
         System.out.println("文件名为"+fileName);
 
         List<String> parameters = new ArrayList<>();
-        parameters.add(fileName);
+        assert fileName != null;
+        parameters.add(fileName.split(".")[0]);
         parameters.add(fileStorePath);
         LogEntry logEntry = LogEntry.newBuilder()
                 .command("add")
                 .parameters(parameters)
                 .build();
-        Response response = put(logEntry);
+        Response response = raft.put(logEntry);
+
         if (!response.isSuccess()){
             return JsonData.buildError(StateType.INTERNAL_SERVER_ERROR.getCode(),StateType.INTERNAL_SERVER_ERROR.value());
         }
 
-        //获取文件后缀
+        //将日志持久化
+        stateMachine.apply(logEntry);
+
         File dest = new File(fileStorePath + fileName);
         try {
             file.transferTo(dest);

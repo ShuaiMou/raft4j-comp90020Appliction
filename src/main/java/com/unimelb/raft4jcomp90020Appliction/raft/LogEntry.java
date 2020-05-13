@@ -1,4 +1,4 @@
-package com.unimelb.raft4jcomp90020Appliction.domain;
+package com.unimelb.raft4jcomp90020Appliction.raft;
 
 import lombok.Getter;
 import lombok.Setter;
