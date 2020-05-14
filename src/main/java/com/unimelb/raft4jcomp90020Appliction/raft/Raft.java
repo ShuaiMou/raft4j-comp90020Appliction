@@ -1,5 +1,6 @@
 package com.unimelb.raft4jcomp90020Appliction.raft;
 
+import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.PropertySource;
@@ -20,6 +21,7 @@ import java.util.List;
 @Slf4j
 @PropertySource("classpath:/application.properties")
 public class Raft {
+    private Gson gson = new Gson();
 
     private String raftLeaderIP;
 
@@ -36,14 +38,19 @@ public class Raft {
     //与 raft 集群建立连接
     public Response put(LogEntry logEntry){
         Response response = null;
-        buildConnection();
+        if (!buildConnection()){
+            return response;
+        }
         try {
             System.out.println(raftLeaderIP + ": "+ raftLeaderPort);
             ObjectOutputStream clientOut = new ObjectOutputStream(client.getOutputStream());
             ObjectInputStream clientIn = new ObjectInputStream(client.getInputStream());
-            clientOut.writeObject(logEntry);
+            clientOut.writeObject(gson.toJson(logEntry));
             clientOut.flush();
-            response = (Response) clientIn.readObject();
+            String responseString = (String) clientIn.readObject();
+            if (responseString != null) {
+                response = gson.fromJson(responseString, Response.class);
+            }
         } catch (IOException | ClassNotFoundException e) {
            log.error(e.getMessage());
         } finally {
@@ -79,9 +86,13 @@ public class Raft {
 
         boolean success = false;
 
-        //Todo: 后期可以增加超时，如果全部地址无法建立连接可以进一步处理
-        while (!success){
+        long startTime = System.currentTimeMillis();
+        long endTime = startTime;
+        long timeout = 1000L;
+
+        while (!success && endTime - startTime < timeout){
             for (RaftAddress address : addresses){
+                endTime = System.currentTimeMillis();
                 try {
                     client = new Socket(address.getIp(), address.getPort());
                     log.info("successfully connecting raft node [{}]", address);
@@ -92,7 +103,7 @@ public class Raft {
                 }
             }
         }
-        return true;
+        return success;
     }
 
     private void initialRaftClusterAddress(){

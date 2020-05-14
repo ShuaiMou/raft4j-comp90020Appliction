@@ -1,5 +1,6 @@
 package com.unimelb.raft4jcomp90020Appliction.testFileControllerTCP;
 
+import com.google.gson.Gson;
 import com.unimelb.raft4jcomp90020Appliction.raft.LogEntry;
 import com.unimelb.raft4jcomp90020Appliction.raft.Response;
 
@@ -12,11 +13,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * @Auther: Saul
- * @Date: 12/5/20 16:46
+ * @Date: 12/5/20 16:37
  * @Description:
  */
 public class RaftNode {
+
+    public static Gson gson = new Gson();
     public static void main(String[] args){
         ExecutorService executorService = Executors.newFixedThreadPool(2);
         ServerSocket serverSocket = null;
@@ -25,7 +27,7 @@ public class RaftNode {
             System.out.println("raft node started successfully");
             while (true) {
                 Socket socket = serverSocket.accept();
-                executorService.execute(new RaftLeader.UserThread(socket));
+                executorService.execute(new UserThread(socket));
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -34,6 +36,7 @@ public class RaftNode {
 
     static class UserThread implements Runnable {
         private Socket socket;
+
 
         public UserThread(Socket socket) {
             this.socket = socket;
@@ -44,14 +47,15 @@ public class RaftNode {
             try {
                 ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
                 ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
-                LogEntry entry = (LogEntry) in.readObject();
+                String logEntryString = (String) in.readObject();
+                LogEntry entry = gson.fromJson(logEntryString, LogEntry.class);
                 System.out.println(entry);
 
                 entry.setTerm(11111);
-                out.writeObject(new Response("127.0.0.1", 8021, true));
+                out.writeObject(gson.toJson(new Response("127.0.0.1", 8021, true)));
                 out.flush();
             } catch (IOException | ClassNotFoundException e) {
-                e.printStackTrace();
+               e.printStackTrace();
             } finally {
                 try {
                     if (client != null){
@@ -70,4 +74,5 @@ public class RaftNode {
         }
 
     }
+
 }

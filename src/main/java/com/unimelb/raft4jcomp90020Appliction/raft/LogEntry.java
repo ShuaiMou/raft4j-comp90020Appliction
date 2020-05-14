@@ -13,7 +13,7 @@ import java.util.List;
  */
 @Getter
 @Setter
-public class LogEntry implements Serializable {
+public class LogEntry implements Serializable{
 
     //收到时的任期号
     private long term;
@@ -69,7 +69,7 @@ public class LogEntry implements Serializable {
     public String toString() {
         return "LogEntry{" +
                 "term=" + term +
-                ", command='" + command + '\'' +
+                ", command='" + command +
                 ", parameters=" + parameters.get(0) + ":" + parameters.get(1)+
                 '}';
     }

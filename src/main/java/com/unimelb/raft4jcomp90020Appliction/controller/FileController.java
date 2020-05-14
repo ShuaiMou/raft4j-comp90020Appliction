@@ -47,7 +47,7 @@ public class FileController {
 
         List<String> parameters = new ArrayList<>();
         assert fileName != null;
-        parameters.add(fileName.split(".")[0]);
+        parameters.add(fileName);
         parameters.add(fileStorePath);
         LogEntry logEntry = LogEntry.newBuilder()
                 .command("add")
@@ -55,7 +55,7 @@ public class FileController {
                 .build();
         Response response = raft.put(logEntry);
 
-        if (!response.isSuccess()){
+        if (response == null || !response.isSuccess()){
             return JsonData.buildError(StateType.INTERNAL_SERVER_ERROR.getCode(),StateType.INTERNAL_SERVER_ERROR.value());
         }
 
