@@ -32,7 +32,18 @@ public class KVStateMachine implements StateMachine {
         wal.add(logEntry);
         String key = logEntry.getParameters().get(0);
         String value = logEntry.getParameters().get(1);
-        map.put(key,value);
-        redisTemplate.opsForValue().set(key,value);
+
+        String command = logEntry.getCommand();
+        List<String> parameters = logEntry.getParameters();
+        if ("delete".equalsIgnoreCase(command)) {
+            map.remove(key);
+            redisTemplate.delete(key);
+        } else if ("add".equalsIgnoreCase(command)) {
+            map.put(key, value);
+            redisTemplate.opsForValue().set(key,value);
+        } else if ("modify".equalsIgnoreCase(command)) {
+            map.replace(key, value);
+        }
+
     }
 }

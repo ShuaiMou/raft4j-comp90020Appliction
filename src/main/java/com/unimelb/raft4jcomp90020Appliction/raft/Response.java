@@ -15,6 +15,7 @@ import java.io.Serializable;
 public class Response implements Serializable {
     private String leaderIP;
     private int leaderPort;
+    private String path;
     private boolean success;
 
     @Override
@@ -22,6 +23,7 @@ public class Response implements Serializable {
         return "Response{" +
                 "leaderIP='" + leaderIP + '\'' +
                 ", leaderPort=" + leaderPort +
+                ", path='" + path + '\'' +
                 ", success=" + success +
                 '}';
     }

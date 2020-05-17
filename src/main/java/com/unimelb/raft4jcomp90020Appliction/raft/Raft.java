@@ -2,6 +2,7 @@ package com.unimelb.raft4jcomp90020Appliction.raft;
 
 import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Component;
@@ -23,6 +24,9 @@ import java.util.List;
 public class Raft {
     private Gson gson = new Gson();
 
+    @Autowired
+    private StateMachine stateMachine;
+
     private String raftLeaderIP;
 
     private int raftLeaderPort;
@@ -36,7 +40,57 @@ public class Raft {
 
 
     //与 raft 集群建立连接
-    public Response put(LogEntry logEntry){
+    public boolean put(String fileName, String fileStorePath){
+        List<String> parameters = new ArrayList<>();
+        assert fileName != null;
+        parameters.add(fileName);
+        parameters.add(fileStorePath);
+        LogEntry logEntry = LogEntry.newBuilder()
+                .command("add")
+                .parameters(parameters)
+                .build();
+        Response response = sendRequest(logEntry);
+        if (response == null || !response.isSuccess()){
+            return false;
+        }else {
+            //将日志持久化
+            stateMachine.apply(logEntry);
+            return true;
+        }
+    }
+
+    public String get(String fileName){
+        List<String> parameters = new ArrayList<>();
+        parameters.add(fileName);
+        LogEntry logEntry = LogEntry.newBuilder()
+                .command("search")
+                .parameters(parameters)
+                .build();
+        Response response = sendRequest(logEntry);
+        if (response == null || !response.isSuccess()){
+            return "";
+        }
+
+        return response.getPath();
+
+    }
+
+    public boolean delete(String fileName){
+        List<String> parameters = new ArrayList<>();
+        parameters.add(fileName);
+        LogEntry logEntry = LogEntry.newBuilder()
+                .command("delete")
+                .parameters(parameters)
+                .build();
+        Response response = sendRequest(logEntry);
+        if (response == null || !response.isSuccess()){
+            return false;
+        }
+        stateMachine.apply(logEntry);
+        return true;
+    }
+
+    private Response sendRequest(LogEntry logEntry){
         Response response = null;
         if (!buildConnection()){
             return response;
@@ -52,7 +106,7 @@ public class Raft {
                 response = gson.fromJson(responseString, Response.class);
             }
         } catch (IOException | ClassNotFoundException e) {
-           log.error(e.getMessage());
+            log.error(e.getMessage());
         } finally {
             if (response != null && (!response.getLeaderIP().equals(raftLeaderIP) || response.getLeaderPort()!=raftLeaderPort)) {
                 log.info("修正 raftleader 地址" + raftLeaderIP +": "+ raftLeaderPort);
@@ -73,6 +127,7 @@ public class Raft {
         }
         return response;
     }
+
 
     private boolean buildConnection(){
         //第一次调用加载集群节点 ip:port

@@ -52,7 +52,7 @@ public class RaftNode {
                 System.out.println(entry);
 
                 entry.setTerm(11111);
-                out.writeObject(gson.toJson(new Response("127.0.0.1", 8021, true)));
+                out.writeObject(gson.toJson(new Response("127.0.0.1", 8021, "",true)));
                 out.flush();
             } catch (IOException | ClassNotFoundException e) {
                e.printStackTrace();
