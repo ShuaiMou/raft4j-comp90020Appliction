@@ -62,6 +62,7 @@ public class Raft {
     public String get(String fileName){
         List<String> parameters = new ArrayList<>();
         parameters.add(fileName);
+        parameters.add("");
         LogEntry logEntry = LogEntry.newBuilder()
                 .command("search")
                 .parameters(parameters)
@@ -78,6 +79,7 @@ public class Raft {
     public boolean delete(String fileName){
         List<String> parameters = new ArrayList<>();
         parameters.add(fileName);
+        parameters.add("");
         LogEntry logEntry = LogEntry.newBuilder()
                 .command("delete")
                 .parameters(parameters)
